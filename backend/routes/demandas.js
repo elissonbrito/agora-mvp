@@ -90,4 +90,30 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
+// PUT /demanda/:id/encaminhar  { "id_setor": 3 }
+router.put('/:id/encaminhar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id_setor } = req.body;
+
+    if (!id_setor) return res.status(400).json({ error: 'id_setor é obrigatório' });
+
+    // Confere se a demanda existe
+    const [d] = await pool.query('SELECT id FROM demandas WHERE id = ?', [id]);
+    if (d.length === 0) return res.status(404).json({ error: 'Demanda não encontrada' });
+
+    // Confere se o setor existe
+    const [s] = await pool.query('SELECT id FROM setores WHERE id = ?', [id_setor]);
+    if (s.length === 0) return res.status(400).json({ error: 'id_setor inválido (setor não existe)' });
+
+    // Atualiza demanda (id_setor) e opcionalmente status
+    await pool.execute('UPDATE demandas SET id_setor = ?, status = ? WHERE id = ?', [id_setor, 'Em análise', id]);
+
+    res.json({ ok: true, id: Number(id), id_setor: Number(id_setor), status: 'Em análise' });
+  } catch (e) {
+    console.error('Erro PUT /demanda/:id/encaminhar:', e);
+    res.status(500).json({ error: 'Erro ao encaminhar demanda' });
+  }
+});
+
 module.exports = router;
